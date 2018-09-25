@@ -1,7 +1,7 @@
 package = 'jsonpath'
 version = '1.0-1'
 source = {
-    url = 'git://github.com/mrpace2/lua-jsonpath',
+    url = 'git://github.com/tarantool/lua-jsonpath',
     tag = '1.0'
 }
 description = {
@@ -11,21 +11,18 @@ This library implements Stefan Goessner's JsonPath syntax (http://goessner.net/a
 
 Lua JsonPath is compatible with David Chester's Javascript implementation (https://github.com/dchester/jsonpath).
 
-The Lua JsonPath library was written from scratch by Frank Edelhaeuser. It's a pure Lua implementation based on a PEG grammer handled by Roberto Ierusalimschy's fabulous LPeg pattern-matching library (http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html).
+The Lua JsonPath library was written from scratch by Frank Edelhaeuser. It's a pure Lua implementation based on a PEG grammer handled by LulPeg pattern-matching library (https://github.com/pygy/LuLPeg.git).
     ]],
-    homepage = 'https://github.com/mrpace2/lua-jsonpath',
+    homepage = 'https://github.com/tarantool/lua-jsonpath',
     license = 'MIT'
 }
 dependencies = {
     'lua >= 5.1',
-    'lpeg >= 1.0.0'
+    'lulpeg'
 }
 build = {
     type = 'builtin',
     modules = {
         jsonpath = 'jsonpath.lua'
-    },
-    copy_directories = { 
-        'test'
     }
 }

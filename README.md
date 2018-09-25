@@ -4,7 +4,7 @@ Query Lua data structures with JsonPath expressions. Robust and safe JsonPath en
 
 This library implements Stefan Goessner's [JsonPath syntax](http://goessner.net/articles/JsonPath/) in Lua. Lua JsonPath is compatible with David Chester's [Javascript implementation](https://github.com/dchester/jsonpath).
 
-The JsonPath Lua library was written from scratch by Frank Edelhaeuser. It's a pure Lua implementation based on a PEG grammer handled by Roberto Ierusalimschy's fabulous [LPeg pattern-matching library](http://www.inf.puc-rio.br/~roberto/lpeg/lpeg.html).
+The JsonPath Lua library was written from scratch by Frank Edelhaeuser. It's a pure Lua implementation based on a PEG grammer handled by [LulPeg pattern-matching library](https://github.com/pygy/LuLPeg).
 
 Some of this README and a subset of test cases were adopted from David Chester's [Javascript implementation](https://github.com/dchester/jsonpath) which is based on Stefan Goessner's [original work](http://goessner.net/articles/JsonPath/).
 
@@ -188,8 +188,8 @@ Provides the lua-jsonpath LPEG grammer for embedding in higher level LPEG gramme
 The abstract syntax tree matched for JsonPath elementes in a higher level LPEG grammer can then be supplied to `jp.nodes()`, `jp.paths()` or `jp.query()` instead of the string `pathExpression`.
 
 ```lua
-local lpeg = require('lpeg')
-local assignment = lpeg.C(lpeg.R'az') * lpeg.P'=' * lpeg.P'"' * jp.grammer() * lpeg.P'"'
+local lulpeg = require('lulpeg')
+local assignment = lulpeg.C(lulpeg.R'az') * lulpeg.P'=' * lulpeg.P'"' * jp.grammer() * lulpeg.P'"'
 local var, ast = assignment:match('x="$..author"')
 -- var = 'x'
 local results = jp.query(data, ast)
@@ -237,7 +237,7 @@ Some of David Chester's API methods are not implemented in Lua JsonPath:
 
 The `jp.value` API method does not support the third argument (`newValue`).
 
-The `jp.grammer` API method was added in Lua JsonPath. The `jp.query`, `jp.value`, `jp.paths`, `jp.nodes` functions accept abstract syntax trees returned by `lpeg.match` for Lua JsonPath expressions matched using `jp.grammer`. This is for embedding Lua JsonPath into higher level grammers.
+The `jp.grammer` API method was added in Lua JsonPath. The `jp.query`, `jp.value`, `jp.paths`, `jp.nodes` functions accept abstract syntax trees returned by `lulpeg.match` for Lua JsonPath expressions matched using `jp.grammer`. This is for embedding Lua JsonPath into higher level grammers.
 
 
 ## License
