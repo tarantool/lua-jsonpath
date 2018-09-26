@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 --[[
 
     This file is part of lua-jsonpath.
@@ -31,7 +33,7 @@
 
     Install dependencies:
 
-        luarocks install jsonpath
+        tarantoolctl rocks install jsonpath
 
         git clone https://github.com/bluebird75/luaunit
         cd luaunit
@@ -39,14 +41,14 @@
 
     Usage:
 
-        lua test.lua
+        make test
 
 ]]--
 local lu = require('luaunit')
 
 
 -- For grammer tests
-local lpeg = require('lpeg')
+local lulpeg = require('lulpeg')
 
 
 -- Module under test
@@ -55,12 +57,12 @@ local jp = require('jsonpath')
 
 
 -- Test data
-local data = require('data')
+local data = require('test.data')
 
 
 
 -- Helper: sort node table by path
-function sortByPath(nodes)
+local function sortByPath(nodes)
     local sorted = {}
     for _,v in pairs(nodes) do
         table.insert(sorted, v)
@@ -774,7 +776,7 @@ testSugar = {
 testGrammer = {
 
     testGrammerNodes = function()
-        local assignment = lpeg.C(lpeg.R'az') * lpeg.P'=' * lpeg.P'"' * jp.grammer() * lpeg.P'"'
+        local assignment = lulpeg.C(lulpeg.R'az') * lulpeg.P'=' * lulpeg.P'"' * jp.grammer() * lulpeg.P'"'
         local var, ast = assignment:match('x="$..author"')
         lu.assertItemsEquals(var, 'x')
         lu.assertItemsEquals(ast, { '$', '..', 'author' })
@@ -789,7 +791,7 @@ testGrammer = {
     end,
 
     testGrammerQuery = function()
-        local assignment = lpeg.C(lpeg.R'az') * lpeg.P'=' * lpeg.P'"' * jp.grammer() * lpeg.P'"'
+        local assignment = lulpeg.C(lulpeg.R'az') * lulpeg.P'=' * lulpeg.P'"' * jp.grammer() * lulpeg.P'"'
         local var, ast = assignment:match('x="$..author"')
         lu.assertItemsEquals(var, 'x')
         lu.assertItemsEquals(ast, { '$', '..', 'author' })

@@ -33,7 +33,7 @@
 
     Website:
 
-        https://github.com/mrpace2/lua-jsonpath
+        https://github.com/tarantool/lua-jsonpath
 
     See:
 
@@ -50,11 +50,11 @@
 
     Installation:
 
-        luarocks install jsonpath
+        tarantoolctl rocks install jsonpath
 
     Dependencies:
 
-        - lpeg
+        - lulpeg
 
     Usage:
 
@@ -101,10 +101,10 @@
 local M = {}
 
 
--- Use Roberto Ierusalimschy's fabulous LPeg pattern-matching library
-local lpeg = require('lpeg')
-local S, R, P, V = lpeg.S, lpeg.R, lpeg.P, lpeg.V
-local C, Cc, Cg, Ct, Cp = lpeg.C, lpeg.Cc, lpeg.Cg, lpeg.Ct, lpeg.Cp
+-- Use Roberto Ierusalimschy's fabulous LulPeg pattern-matching library
+local lulpeg = require('lulpeg')
+local S, R, P, V = lulpeg.S, lulpeg.R, lulpeg.P, lulpeg.V
+local C, Cc, Cg, Ct, Cp = lulpeg.C, lulpeg.Cc, lulpeg.Cg, lulpeg.Ct, lulpeg.Cp -- luacheck: ignore
 
 
 -- Return values for match_path()
@@ -118,10 +118,10 @@ local MATCH_PARTIAL = 3
 local jsonpath_grammer = (function()
 
     local function anycase(x)
-        local y = P''
-        for i = 1,#x do
-            local c = x:sub(i,i)
-            y = y * S(c:lower()..c:upper())
+        local y = P ''
+        for i = 1, #x do
+            local c = x:sub(i, i)
+            y = y * S(c:lower() .. c:upper())
         end
         return y
     end
@@ -142,122 +142,118 @@ local jsonpath_grammer = (function()
         return expr
     end
 
-    local space = S' \t\n'
-    local opt_space = space^0
+    local space = S ' \t\n'
+    local opt_space = space ^ 0
 
     local lparen = '(' * opt_space
     local rparen = ')' * opt_space
     local lbrack = '[' * opt_space
     local rbrack = ']'
-    local comma  = ',' * opt_space
-    local colon  = ':' * opt_space
-    local quote = P'"'
-    local apos = P"'"
-    local root = P'$'
-    local star = P'*'
-    local dot = P'.'
-    local at = P'@'
+    local comma = ',' * opt_space
+    local colon = ':' * opt_space
+    local quote = P '"'
+    local apos = P "'"
+    local root = P '$'
+    local star = P '*'
+    local dot = P '.'
+    local at = P '@'
 
-    local sign = S'+-'
+    local sign = S '+-'
     local digit = R('09')
-    local letter = R('AZ','az')
-    local alpha0 = R('AZ','az') + '_'
-    local alphaN = R('AZ','az','09') + '_'
+    local letter = R('AZ', 'az') -- luacheck: ignore
+    local alpha0 = R('AZ', 'az') + '_'
+    local alphaN = R('AZ', 'az', '09') + '_'
     local hexdigit = R('09', 'AF', 'af')
 
-    local number_hex = P'0' * S'xX' * hexdigit^1
-    local number_rat = sign^-1 * (digit^1 * P'.' * digit^0 + P'.'^-1 * digit^1) * (S'eE' * sign^-1 * digit^1)^-1
+    local number_hex = P '0' * S 'xX' * hexdigit ^ 1
+    local number_rat = sign ^ -1 *
+            (digit ^ 1 * P '.' * digit ^ 0 + P '.' ^ -1 * digit ^ 1) * (S 'eE' * sign ^ -1 * digit ^ 1) ^ -1
 
-    local string_q = apos * C((P'\\' * P(1) + (1 - S"\\'"))^0) / function(s) local u = s:gsub("(\\')", "'"); return u; end * apos
-    local string_qq = quote * C((P'\\' * P(1) + (1 - S'\\"'))^0) / function(s) local u = s:gsub('(\\")', '"'); return u; end * quote
+    local string_q = apos * C((P '\\' * P(1) + (1 - S "\\'")) ^ 0) / function(s)
+        local u = s:gsub("(\\')", "'");
+        return u;
+    end * apos
+    local string_qq = quote * C((P '\\' * P(1) + (1 - S '\\"')) ^ 0) / function(s)
+        local u = s:gsub('(\\")', '"');
+        return u;
+    end * quote
 
     local string_literal = (string_q + string_qq) * opt_space
     local number_literal = C(number_hex + number_rat) / tonumber * opt_space
     local boolean_literal = C(anycase('true') + anycase('false')) / toboolean * opt_space
 
-    local name = C(alpha0 * alphaN^0) * opt_space
-    local var_dot = at * dot * C(alpha0 * alphaN^0) * (dot * C(alpha0 * alphaN^0))^0
+    local name = C(alpha0 * alphaN ^ 0) * opt_space
+    local var_dot = at * dot * C(alpha0 * alphaN ^ 0) * (dot * C(alpha0 * alphaN ^ 0)) ^ 0
     local var_brack = at * lbrack * string_literal * rbrack
     local var = (var_dot + var_brack) * opt_space
-    local var_length = at * dot * P'length' * opt_space
+    local var_length = at * dot * P 'length' * opt_space
 
-    local child_index = C(sign^-1 * digit^1) * opt_space
+    local child_index = C(sign ^ -1 * digit ^ 1) * opt_space
 
 
     -- operators (6 = highest precedence), subset of https://sqlite.org/lang_expr.html
-    local op_prec_6 = C(S'*/%') * opt_space
-    local op_prec_5 = C(S'+-') * opt_space
-    local op_prec_4 = C(P'<=' + P'>=' + S'<>') * opt_space
-    local op_prec_3 = C(P'==' + P'=' + P'!=' + P'<>') * opt_space
+    local op_prec_6 = C(S '*/%') * opt_space
+    local op_prec_5 = C(S '+-') * opt_space
+    local op_prec_4 = C(P '<=' + P '>=' + S '<>') * opt_space
+    local op_prec_3 = C(P '==' + P '=' + P '!=' + P '<>') * opt_space
     local op_prec_2 = C(anycase('AND') + '&&') * opt_space
     local op_prec_1 = C(anycase('OR') + '||') * opt_space
 
-    local jsonpath = opt_space * P{
+    local jsonpath = opt_space * P {
         'JSONPATH',
 
-        JSONPATH = Ct(V'CHILD_1' * V'CHILD_N'^0),
+        JSONPATH = Ct(V 'CHILD_1' * V 'CHILD_N' ^ 0),
 
-        CHILD_1 =
-            C(root) * (C('..') + '.') * V'CHILD_NAME' +
-            C(root) * V'CHILD_SUBSCRIPT' +
-            C(root) +
-            Cc('$') * (V'CHILD_SUBSCRIPT' + V'CHILD_NAME'),
+        CHILD_1 = C(root) * (C('..') + '.') * V 'CHILD_NAME' +
+                C(root) * V 'CHILD_SUBSCRIPT' +
+                C(root) +
+                Cc('$') * (V 'CHILD_SUBSCRIPT' + V 'CHILD_NAME'),
 
-        CHILD_N =
-            (C('..') + '.') * V'CHILD_NAME' +
-            C('..') * V'CHILD_SUBSCRIPT' +
-            V'CHILD_SUBSCRIPT',
+        CHILD_N = (C('..') + '.') * V 'CHILD_NAME' +
+                C('..') * V 'CHILD_SUBSCRIPT' +
+                V 'CHILD_SUBSCRIPT',
 
-        CHILD_NAME =
-            child_index +
-            name +
-            C(star),
+        CHILD_NAME = child_index +
+                name +
+                C(star),
 
-        CHILD_SUBSCRIPT =
-            '[' * Ct(V'CHILD_SUBSCRIPT_EXPR') * ']',
+        CHILD_SUBSCRIPT = '[' * Ct(V 'CHILD_SUBSCRIPT_EXPR') * ']',
 
-        CHILD_SUBSCRIPT_EXPR =
-            V'CHILD_ALL' +          -- *
-            V'CHILD_UNION' +        -- n1[,n2[,...]] or (script)
-            V'CHILD_SLICE' +        -- [start]:[end][:step]
-            V'CHILD_FILTER',        -- ?(x > 10)
+        CHILD_SUBSCRIPT_EXPR = V 'CHILD_ALL' + -- *
+                V 'CHILD_UNION' + -- n1[,n2[,...]] or (script)
+                V 'CHILD_SLICE' + -- [start]:[end][:step]
+                V 'CHILD_FILTER', -- ?(x > 10)
 
-        CHILD_ALL =
-            Cc('*') * '*',
+        CHILD_ALL = Cc('*') * '*',
 
-        CHILD_UNION =
-            Cc('union') * V'CHILD_UNION_EXPR' * (comma * V'CHILD_UNION_EXPR')^0 +
-            Cc('union') * '(' * opt_space * Ct(V'CHILD_EXPR') * ')',
+        CHILD_UNION = Cc('union') * V 'CHILD_UNION_EXPR' * (comma * V 'CHILD_UNION_EXPR') ^ 0 +
+                Cc('union') * '(' * opt_space * Ct(V 'CHILD_EXPR') * ')',
 
-        CHILD_SLICE =
-            Cc('slice') * (child_index + Cc'0') * colon * (child_index + Cc'nil') * ((colon * child_index) + Cc'1'),
+        CHILD_SLICE = Cc('slice') * (child_index + Cc '0') * colon
+                * (child_index + Cc 'nil') * ((colon * child_index) + Cc '1'),
 
-        CHILD_FILTER =
-            Cc('filter') * '?(' * opt_space * Ct(V'CHILD_EXPR') * ')',
+        CHILD_FILTER = Cc('filter') * '?(' * opt_space * Ct(V 'CHILD_EXPR') * ')',
 
-        CHILD_UNION_EXPR =
-            Ct(V'CHILD_SLICE') +
-            string_literal +
-            child_index,
+        CHILD_UNION_EXPR = Ct(V 'CHILD_SLICE') +
+                string_literal +
+                child_index,
 
-        CHILD_EXPR =
-            Cc('expr') * V'EXPR',
+        CHILD_EXPR = Cc('expr') * V 'EXPR',
 
         -- Expressions, try matching lowest precedence first
-        EXPR = Ct(Cc('expr') * V'EXP2' * (op_prec_1 * V'EXP2')^0) / reduce_expr,
-        EXP2 = Ct(Cc('expr') * V'EXP3' * (op_prec_2 * V'EXP3')^0),
-        EXP3 = Ct(Cc('expr') * V'EXP4' * (op_prec_3 * V'EXP4')^0),
-        EXP4 = Ct(Cc('expr') * V'EXP5' * (op_prec_4 * V'EXP5')^0),
-        EXP5 = Ct(Cc('expr') * V'EXP6' * (op_prec_5 * V'EXP6')^0),
-        EXP6 = Ct(Cc('expr') * V'FACT' * (op_prec_6 * V'FACT')^0),
+        EXPR = Ct(Cc('expr') * V 'EXP2' * (op_prec_1 * V 'EXP2') ^ 0) / reduce_expr,
+        EXP2 = Ct(Cc('expr') * V 'EXP3' * (op_prec_2 * V 'EXP3') ^ 0),
+        EXP3 = Ct(Cc('expr') * V 'EXP4' * (op_prec_3 * V 'EXP4') ^ 0),
+        EXP4 = Ct(Cc('expr') * V 'EXP5' * (op_prec_4 * V 'EXP5') ^ 0),
+        EXP5 = Ct(Cc('expr') * V 'EXP6' * (op_prec_5 * V 'EXP6') ^ 0),
+        EXP6 = Ct(Cc('expr') * V 'FACT' * (op_prec_6 * V 'FACT') ^ 0),
 
-        FACT =
-            string_literal +
-            number_literal +
-            boolean_literal +
-            Ct(Cc('var.length') * var_length) +
-            Ct(Cc('var') * var) +
-            lparen * V'EXPR' * rparen,
+        FACT = string_literal +
+                number_literal +
+                boolean_literal +
+                Ct(Cc('var.length') * var_length) +
+                Ct(Cc('var') * var) +
+                lparen * V 'EXPR' * rparen,
 
     } * opt_space
 
@@ -288,14 +284,15 @@ local function eval_ast(ast, obj)
         if obj == nil then
             return nil, 'object is not set'
         end
-        for i = 2, #expr, 2 do  -- [1] is "var"
+        for i = 2, #expr, 2 do
+            -- [1] is "var"
             local member, err = eval_ast(expr[i], obj)
             if member == nil then
                 return nil, err
             end
             obj = obj[member]
             if obj == nil then
-                return nil, 'object doesn\'t contain an object or attribute "'..member..'"'
+                return nil, 'object doesn\'t contain an object or attribute "' .. member .. '"'
             end
         end
         return obj
@@ -303,7 +300,7 @@ local function eval_ast(ast, obj)
     -- Helper helper: calculate number of members in object
     local function eval_var_length(obj)
         local count = 0
-        for i,_ in pairs(obj) do
+        for i, _ in pairs(obj) do
             count = count + 1
         end
         return count
@@ -311,10 +308,10 @@ local function eval_ast(ast, obj)
     -- Helper helper: evaluate 'union' expression inside abstract syntax tree
     local function eval_union(expr, obj)
         local matches = {}  -- [1] is "union"
-        for i=2, #expr do
+        for i = 2, #expr do
             local result = eval_ast(expr[i], obj)
             if type(result) == 'table' then
-                for _,j in ipairs(result) do
+                for _, j in ipairs(result) do
                     table.insert(matches, j)
                 end
             else
@@ -334,7 +331,7 @@ local function eval_ast(ast, obj)
         local matches = {}  -- [1] is "slice"
         if #expr == 4 then
             local from = tonumber(eval_ast(expr[2], obj))
-            local to   = tonumber(eval_ast(expr[3], obj))
+            local to = tonumber(eval_ast(expr[3], obj))
             local step = tonumber(eval_ast(expr[4], obj))
             if (from == nil) or (from < 0) or (to == nil) or (to < 0) then
                 local len = eval_var_length(obj)
@@ -349,7 +346,7 @@ local function eval_ast(ast, obj)
                     to = len + to
                 end
             end
-            for i=from, to - 1, step do
+            for i = from, to - 1, step do
                 table.insert(matches, i)
             end
         end
@@ -367,7 +364,7 @@ local function eval_ast(ast, obj)
             if operator == nil then
                 return nil, 'missing expression operator'
             end
-            local op2, err = eval_ast(expr[i+1], obj)
+            local op2, err = eval_ast(expr[i + 1], obj)
             if op2 == nil then
                 return nil, err
             end
@@ -385,9 +382,9 @@ local function eval_ast(ast, obj)
                 op1 = notempty(op1) and notempty(op2)
             elseif operator:upper() == 'OR' or operator == '||' then
                 op1 = notempty(op1) or notempty(op2)
-            elseif operator == '=' or operator == '=='then
+            elseif operator == '=' or operator == '==' then
                 op1 = op1 == match_type(op1, op2)
-            elseif operator == '<>' or operator == '!='then
+            elseif operator == '<>' or operator == '!=' then
                 op1 = op1 ~= match_type(op1, op2)
             elseif operator == '>' then
                 op1 = op1 > match_type(op1, op2)
@@ -398,7 +395,7 @@ local function eval_ast(ast, obj)
             elseif operator == '<=' then
                 op1 = op1 <= match_type(op1, op2)
             else
-                return nil, 'unknown expression operator "'..operator..'"'
+                return nil, 'unknown expression operator "' .. operator .. '"'
             end
         end
         return op1
@@ -425,15 +422,13 @@ local function eval_ast(ast, obj)
     return 0
 end
 
-
-
-function match_path(ast, path, parent, obj)
+local function match_path(ast, path, parent, obj)
     local descendants = false
     local ast_iter = ipairs(ast)
     local ast_key, ast_spec = ast_iter(ast, 0)
     local match = MATCH_PARTIAL
 
-    for _,component in ipairs(path) do
+    for _, component in ipairs(path) do
         local match_component = true
         if type(ast_spec) ~= 'table' and ast_spec == '..' then
             -- handle descendant switch upfront so descendant
@@ -454,7 +449,7 @@ function match_path(ast, path, parent, obj)
             elseif ast_spec[1] == 'union' or ast_spec[1] == 'slice' then
                 -- match union or slice expression (on parent object)
                 local matches = eval_ast(ast_spec, parent)
-                for _,i in pairs(matches) do
+                for _, i in pairs(matches) do
                     match_component = tostring(i) == tostring(component)
                     if match_component then
                         break
@@ -499,7 +494,6 @@ function match_path(ast, path, parent, obj)
     return match
 end
 
-
 local function match_tree(nodes, ast, path, parent, obj, count)
     -- Try to match every node against AST
     local match = match_path(ast, path, parent, obj)
@@ -519,9 +513,9 @@ local function match_tree(nodes, ast, path, parent, obj, count)
     end
     -- Recursively traverse children, if any
     if type(obj) == 'table' and (match == MATCH_PARTIAL or match == MATCH_DESCENDANTS) then
-        for key,child in pairs(obj) do
+        for key, child in pairs(obj) do
             local path1 = {}
-            for _,p in ipairs(path) do
+            for _, p in ipairs(path) do
                 table.insert(path1, p)
             end
             table.insert(path1, type(key) == 'string' and key or (key - 1))
@@ -556,10 +550,10 @@ function M.parse(expr)
 
     local ast = Ct(jsonpath_grammer * Cp()):match(expr)
     if ast == nil or #ast ~= 2 then
-        return nil, 'invalid expression "'..expr..'"'
+        return nil, 'invalid expression "' .. expr .. '"'
     end
     if ast[2] ~= #expr + 1 then
-        return nil, 'invalid expression "'..expr..'" near "'..expr:sub(ast[2])..'"'
+        return nil, 'invalid expression "' .. expr .. '" near "' .. expr:sub(ast[2]) .. '"'
     end
     return ast[1]
 end
@@ -614,7 +608,7 @@ function M.nodes(obj, expr, count)
     end
 
     if #ast == 1 then
-        return { { path = {'$'}, value = obj } }
+        return { { path = { '$' }, value = obj } }
     end
 
     local matches = {}
@@ -622,7 +616,7 @@ function M.nodes(obj, expr, count)
 
     -- Sort results by path
     local sorted = {}
-    for p,v in pairs(matches) do
+    for p, v in pairs(matches) do
         table.insert(sorted, { path = p, value = v })
     end
     table.sort(sorted, function(a, b)
@@ -648,7 +642,7 @@ function M.query(obj, expr, count)
         return nil, err
     end
     local results = {}
-    for _,n in ipairs(nodes) do
+    for _, n in ipairs(nodes) do
         table.insert(results, n.value)
     end
     return results
@@ -663,14 +657,14 @@ end
 --      local author = jp.value(data, '$..author')
 --      -- 'Nigel Rees'
 --
-function M.value(obj, expr)
+function M.value(obj, expr, count)
     local nodes, err = M.nodes(obj, expr, count)
     if nodes == nil then
         return nil, err
+    elseif nodes[1] then
+        return nodes[1].value
     end
-    for _,n in ipairs(nodes) do
-        return n.value
-    end
+
     return nil, 'no element matching expression'
 end
 
@@ -697,7 +691,7 @@ function M.paths(obj, expr, count)
         return nil, err
     end
     local results = {}
-    for _,n in ipairs(nodes) do
+    for _, n in ipairs(nodes) do
         table.insert(results, n.path)
     end
     return results
@@ -721,6 +715,5 @@ end
 function M.grammer()
     return jsonpath_grammer
 end
-
 
 return M
